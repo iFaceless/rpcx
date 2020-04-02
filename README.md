@@ -6,10 +6,11 @@
 
 ## 背景
 
-我们现在的 web api 主要不是写 model 和 schema 吗？一般和 model 关联的资源，可能是通过 rpc 调用获得的。简单的写法是在 model 层写个 property，rpc.GetX 返回资源，然后 schema 层映射这个字段即可。
-这样做的话，marshmallow 默认是逐个 render 的，所以串行调用 N 次会比较慢。一种优化方案是，并发 render，代价，这样对 schema 和 model 没有侵入性。但是对 service 提供方带来请求放大。
+我们现在的 http api 主要写 model 和 schema。一般和 model 关联的资源，可能是通过 rpc 调用获得的。简单的写法是在 model 层写个 property，rpc.GetX 返回资源，然后 schema 层映射这个字段即可。
 
-另一种优化方案，是在 handler 层，BatchGetX 一次到位，然后通过 context 传入到 schema 中，再提取。这样不够优雅。
+这样做的话，marshmallow 默认是逐个 render 的，所以串行调用 N 次会比较慢。一种优化方案是，并发 render，代价，这样对 schema 和 model 没有侵入性。但是对 service 提供方带来较多的请求放大，除非在并发调用时控制并发量，但是这样业务方做起来会比价麻烦，提炼到框架中会更适合。
+
+另一种优化方案，是在 handler 层，BatchGetX 一次到位，然后通过 context 传入到 schema 中，再提取。这样不够优雅，Handler 层需要改动，Schema 层侵入性修改太大。
 
 所以怎么能够保持原有的写法，model 层和 schema 层简单写，底层自动 BatchGetX，来优化。这就是该工具想要解决的问题。
 
