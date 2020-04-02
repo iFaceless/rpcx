@@ -6,13 +6,13 @@
 
 ## 背景
 
-我们现在的 http api 主要写 model 和 schema。一般和 model 关联的资源，可能是通过 rpc 调用获得的。简单的写法是在 model 层写个 property，rpc.GetX 返回资源，然后 schema 层映射这个字段即可。
+我们现在的 HTTP API 主要写 Model 和 Schema。一般和 Model 关联的资源，可能是通过 RPC 调用获得的。简单的写法是在 Model 层写个 Property，通过rpc.GetX 返回资源，然后 Schema 层映射这个字段即可。
 
-这样做的话，marshmallow 默认是逐个 render 的，所以串行调用 N 次会比较慢。一种优化方案是，并发 render，代价，这样对 schema 和 model 没有侵入性。但是对 service 提供方带来较多的请求放大，除非在并发调用时控制并发量，但是这样业务方做起来会比价麻烦，提炼到框架中会更适合。
+这样做的话，Python marshmallow 框架默认是逐个 Schema 进行 Render 的，所以串行调用 N 次会比较慢。一种优化方案是，并发 Render（portal 框架默认支持），这样对 Schema 和 Model 没有侵入性。但是这样做对 service 提供方会带来比较明显的请求放大（比如突发流量可能把上游击垮），除非在并发调用时控制并发量，但是这样业务方做起来会比较麻烦，提炼到框架中会更适合（这点 portal 也已经支持）。
 
-另一种优化方案，是在 handler 层，BatchGetX 一次到位，然后通过 context 传入到 schema 中，再提取。这样不够优雅，Handler 层需要改动，Schema 层侵入性修改太大。
+另一种优化方案，是在 Handler 层，BatchGetX 一次到位，然后通过 context 传入到 Schema 中，再提取。但是这样的写法不够优雅，Handler 层需要改动，对 Schema 层侵入性修改太大。
 
-所以怎么能够保持原有的写法，model 层和 schema 层简单写，底层自动 BatchGetX，来优化。这就是该工具想要解决的问题。
+所以怎么能够保持原有的写法，Model 层和 Schema 层简单写，底层自动 BatchGetX？也就是自动合并 RPC 请求。这就是该工具尝试解决的问题。
 
 ```go
 type StudentModel struct {
@@ -26,7 +26,7 @@ func (s *StudentModel) Member(ctx context.Member) *rpc.Member {
 type MemberSchema struct { /*...*/ }
 
 type StudentSchema struct {
-    Member []MemberSchema `portal: nested`
+    Member *MemberSchema `portal: nested`
 }
 
 students := StudentModel.GetsBy(limit=20)
